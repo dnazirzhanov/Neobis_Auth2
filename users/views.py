@@ -44,3 +44,40 @@ class LoginView(generics.GenericAPIView):
                              'access': str(refresh.access_token)}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ProfileAPIView(generics.GenericAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request):
+        user = request.user
+
+        request.data['user'] = user.id
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        user = request.user
+        personal_data = PersonalData.objects.get(user_id=user.id)
+        serializer = self.serializer_class(personal_data)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        user = request.user
+        request.data['user'] = user.id
+        personal_data = PersonalData.objects.get(user_id=user.id)
+        serializer = self.serializer_class(personal_data, data=request.data, partial=True)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
