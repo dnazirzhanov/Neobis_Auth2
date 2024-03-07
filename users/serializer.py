@@ -56,3 +56,12 @@ class LoginSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Invalid credentials, try again')
 
         return data
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = PersonalData
+        fields = ['name', 'last_name', 'photo', 'birth_date', 'email', 'username', 'user']
