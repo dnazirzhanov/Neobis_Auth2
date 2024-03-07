@@ -65,3 +65,17 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonalData
         fields = ['name', 'last_name', 'photo', 'birth_date', 'email', 'username', 'user']
+
+
+class PhoneNumberSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PhoneNumber
+        fields = ['phone_number', 'user']
+
+
+class CodePhoneNumberSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PhoneNumber
+        fields = ['code_activation', 'user']
