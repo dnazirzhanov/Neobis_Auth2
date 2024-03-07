@@ -3,14 +3,29 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+import jwt
+from django.urls import reverse
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from .utils import Util
+from .models import User
+from neo_auth import settings
+
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
     ProfileSerializer,
     PhoneNumberSerializer,
     CodePhoneNumberSerializer,
+    UserEmailSerializer,
+    EmailVerificationSerializer
 )
 from .models import PersonalData, PhoneNumber
+
+from django.urls import reverse_lazy
 
 
 class RegisterView(generics.GenericAPIView):
@@ -23,11 +38,32 @@ class RegisterView(generics.GenericAPIView):
 
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
+
+            # Send verification email
+            token = self._generate_verification_token(user)
+            self._send_verification_email(user, token)
+
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             return Response({"user": serializer.data, "access_token": access_token}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def _generate_verification_token(self, user):
+        token = RefreshToken.for_user(user)
+        return str(token.access_token)
+
+    def _send_verification_email(self, user, token):
+        current_site = self.request.get_host()
+        verification_link = reverse_lazy("email_verify") + f"?token={token}"
+        verification_url = f"http://{current_site}{verification_link}"
+        body = f"Hi {user.username},\n\nPlease verify your email by clicking on the following link:\n{verification_url}"
+        data = {
+            "email_body": body,
+            "to_email": user.email,
+            "email_subject": "Verify your email",
+        }
+        Util.send_email(data)
 
 
 class LoginView(generics.GenericAPIView):
@@ -132,7 +168,7 @@ class ActivatePhoneNumberAPIView(generics.GenericAPIView):
         code_activation_request = request.data.get('code_activation')
         code_activation_user = PhoneNumber.objects.get(user_id=user.id).code_activation
         if code_activation_request == code_activation_user:
-            user.is_verified = True
+            user.is_verified_phone = True
             user.save()
             return Response(
                 {'message': 'Phone number verified successfully.'}, status=status.HTTP_200_OK
@@ -140,4 +176,39 @@ class ActivatePhoneNumberAPIView(generics.GenericAPIView):
         else:
             return Response(
                 {'message': 'Please enter the correct verification code.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
+class VerifyEmailAPIView(APIView):
+    serializer_class = EmailVerificationSerializer
+    permission_classes = (AllowAny,)
+
+
+    def get(self, request):
+        token = request.GET.get("token")
+        if not token:
+            return Response(
+                {"error": "Token is not provided."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms="HS256")
+            user = User.objects.get(id=payload["user_id"])
+            if not user:
+                return Response(
+                    {"error": "User not found."}, status=status.HTTP_404_NOT_FOUND
+                )
+            if not user.is_verified:
+                user.is_verified = True
+                user.save()
+                return Response(
+                    {"message": "Successfully activated"}, status=status.HTTP_200_OK
+                )
+        except jwt.ExpiredSignatureError:
+            return Response(
+                {"error": "Activation Expired"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except jwt.exceptions.DecodeError:
+            return Response(
+                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
             )
