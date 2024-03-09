@@ -18,6 +18,9 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.schemas import get_schema_view
 from django.views.generic import TemplateView
+from drf_yasg import openapi
+from rest_framework import permissions
+
 
 urlpatterns = [
     path('api_schema/', get_schema_view(
