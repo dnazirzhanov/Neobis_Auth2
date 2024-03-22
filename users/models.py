@@ -21,7 +21,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 class PersonalData(models.Model):
     name = models.CharField(max_length=200, blank=False)
     last_name = models.CharField(max_length=200, blank=False)
-    photo = models.ImageField(null=True, blank=True)
+    photo = models.FileField(upload_to='personal-info')
     birth_date = models.DateField(blank=True, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 

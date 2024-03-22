@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import datetime
 import os
+import cloudinary
+import cloudinary_storage
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,7 +46,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework',
     'rest_framework_swagger',
-    'corsheaders'
+    'corsheaders',
+    'cloudinary',
+    'cloudinary_storage'
 ]
 
 MIDDLEWARE = [
@@ -147,6 +151,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
+cloudinary.config(
+    cloud_name="dtb6akl8g",
+    api_key="422783672922678",
+    api_secret="2p07Zm34Hn8zsxT-SYG4404hAz0"
+)
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
